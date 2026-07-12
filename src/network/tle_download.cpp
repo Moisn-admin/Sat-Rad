@@ -4,6 +4,7 @@
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 namespace satellite
 {
@@ -38,66 +39,91 @@ static bool downloadOne(const TleSource& src)
 {
     Serial.printf("Downloading %s\n", src.file);
 
-    HTTPClient http;
-    http.begin(src.url);
+    WiFiClientSecure client;
+    client.setInsecure();
+    client.setTimeout(20);
 
-    int code = http.GET();
+    HTTPClient http;
+    http.useHTTP10(true);
+    http.setTimeout(20000);
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
+    if (!http.begin(client, src.url))
+    {
+        Serial.println("HTTP setup failed");
+        return false;
+    }
+
+    const int code = http.GET();
 
     if (code != HTTP_CODE_OK)
     {
-        Serial.printf("HTTP Error %d\n", code);
+        Serial.printf("HTTP error: %d\n", code);
         http.end();
         return false;
     }
 
-    File file = LittleFS.open(src.file, "w");
+    char tempFile[40];
+    snprintf(tempFile, sizeof(tempFile), "%s.tmp", src.file);
+
+    LittleFS.remove(tempFile);
+
+    File file = LittleFS.open(tempFile, "w");
 
     if (!file)
     {
-        Serial.println("Cannot create file");
+        Serial.printf("Cannot create %s\n", tempFile);
         http.end();
         return false;
     }
 
-    WiFiClient* stream = http.getStreamPtr();
-
-    uint8_t buffer[512];
-
-    while (http.connected())
-    {
-        size_t available = stream->available();
-
-        if (!available)
-        {
-            delay(1);
-            continue;
-        }
-
-        int len = stream->readBytes(
-            buffer,
-            available > sizeof(buffer) ? sizeof(buffer) : available);
-
-        file.write(buffer, len);
-    }
+    const int written = http.writeToStream(&file);
 
     file.close();
     http.end();
 
-    Serial.println("Done");
+    if (written <= 0)
+    {
+        Serial.printf("Download failed: %d\n", written);
+        LittleFS.remove(tempFile);
+        return false;
+    }
 
+    if (written < 100)
+    {
+        Serial.printf("Downloaded file is too small: %d bytes\n", written);
+        LittleFS.remove(tempFile);
+        return false;
+    }
+
+    LittleFS.remove(src.file);
+
+    if (!LittleFS.rename(tempFile, src.file))
+    {
+        Serial.println("Could not save downloaded file");
+        LittleFS.remove(tempFile);
+        return false;
+    }
+
+    Serial.printf("Saved %s (%d bytes)\n", src.file, written);
     return true;
 }
 
 bool downloadTleFiles()
 {
-    bool ok = true;
+    bool allOk = true;
 
-    for (const auto& s : sources)
+    for (const auto& source : sources)
     {
-        ok &= downloadOne(s);
+        if (!downloadOne(source))
+        {
+            allOk = false;
+        }
+
+        delay(500);
     }
 
-    return ok;
+    return allOk;
 }
 
 }
