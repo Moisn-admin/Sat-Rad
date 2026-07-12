@@ -2,8 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
-#include "satellite/satellite_label.h"
+#include <lgfx/v1/lgfx_fonts.hpp>
 
+#include "satellite/satellite_label.h"
 #include "satellite/satellite_manager.h"
 #include "ui/radar_theme.h"
 
@@ -14,7 +15,7 @@ namespace {
 constexpr float kDegToRad = 0.01745329252f;
 constexpr float kDirectionLineLengthPx = 9.0f;
 constexpr float kDirectionLineHalfWidth = 1.0f;
-constexpr int kSatelliteDotRadiusPx = 3;
+constexpr int kLabelGapPx = 7;
 
 void positionToScreen(float azimuth,
                       float elevation,
@@ -53,43 +54,125 @@ uint16_t colorForElevation(lgfx::LovyanGFX& gfx,
   return gfx.color565(255, 0, 0);
 }
 
-}  // namespace
-void drawSatelliteIcon(lgfx::LovyanGFX& gfx,
-                       int x,
-                       int y,
-                       uint16_t color)
-{
-    // Mittelpunkt
-    gfx.fillRect(x - 1, y - 1, 3, 3, color);
+void drawRotatedSatellite(lgfx::LovyanGFX& gfx,
+                          int x,
+                          int y,
+                          float direction_x,
+                          float direction_y,
+                          uint16_t color) {
+  float length =
+      std::sqrt(direction_x * direction_x +
+                direction_y * direction_y);
 
-    // Solarpanels
-    gfx.drawLine(x - 5, y, x - 2, y, color);
-    gfx.drawLine(x + 2, y, x + 5, y, color);
+  if (length < 0.01f) {
+    direction_x = 0.0f;
+    direction_y = -1.0f;
+    length = 1.0f;
+  }
 
-    // Antenne
-    gfx.drawLine(x, y + 2, x, y + 4, color);
+  const float ux = direction_x / length;
+  const float uy = direction_y / length;
+
+  // Senkrechte Richtung für die Solarpanels.
+  const float px = -uy;
+  const float py = ux;
+
+  const int panel_left_x =
+      x - static_cast<int>(std::lround(px * 6.0f));
+  const int panel_left_y =
+      y - static_cast<int>(std::lround(py * 6.0f));
+
+  const int panel_right_x =
+      x + static_cast<int>(std::lround(px * 6.0f));
+  const int panel_right_y =
+      y + static_cast<int>(std::lround(py * 6.0f));
+
+  // Verbindung und Solarpanels.
+  gfx.drawWideLine(
+      panel_left_x,
+      panel_left_y,
+      panel_right_x,
+      panel_right_y,
+      1.0f,
+      color);
+
+  gfx.fillRect(
+      panel_left_x - 1,
+      panel_left_y - 1,
+      3,
+      3,
+      color);
+
+  gfx.fillRect(
+      panel_right_x - 1,
+      panel_right_y - 1,
+      3,
+      3,
+      color);
+
+  // Satellitenkörper.
+  gfx.fillRect(x - 2, y - 2, 5, 5, color);
+
+  // Kleine Antenne in Flugrichtung.
+  const int antenna_start_x =
+      x + static_cast<int>(std::lround(ux * 3.0f));
+  const int antenna_start_y =
+      y + static_cast<int>(std::lround(uy * 3.0f));
+
+  const int antenna_end_x =
+      x + static_cast<int>(std::lround(ux * 6.0f));
+  const int antenna_end_y =
+      y + static_cast<int>(std::lround(uy * 6.0f));
+
+  gfx.drawLine(
+      antenna_start_x,
+      antenna_start_y,
+      antenna_end_x,
+      antenna_end_y,
+      color);
 }
+
 void drawSatelliteLabel(lgfx::LovyanGFX& gfx,
                         const Satellite& sat,
                         int x,
-                        int y)
-{
-    char label[12]{};
+                        int y) {
+  char label[12]{};
 
-    satellite::makeShortLabel(
-        sat.name,
-        label,
-        sizeof(label));
+  satellite::makeShortLabel(
+      sat.name,
+      label,
+      sizeof(label));
 
-    if (label[0] == '\0')
-        return;
+  if (label[0] == '\0') {
+    return;
+  }
 
-    gfx.setTextSize(1);
-    gfx.setTextColor(TFT_WHITE);
-    gfx.setFont(&fonts::Font0);
+  gfx.setFont(&fonts::Font0);
+  gfx.setTextSize(1);
+  gfx.setTextDatum(textdatum_t::top_left);
+  gfx.setTextColor(
+      TFT_WHITE,
+      radar::kColorBackground);
 
-    gfx.drawString(label, x + 6, y - 4);
+  const int text_width = gfx.textWidth(label);
+  const int text_height = gfx.fontHeight();
+
+  int label_x = x + kLabelGapPx;
+  int label_y = y - text_height / 2;
+
+  if (label_x + text_width >= radar::kSize) {
+    label_x = x - kLabelGapPx - text_width;
+  }
+
+  label_x = std::max(0, label_x);
+  label_y = std::max(
+      0,
+      std::min(label_y, radar::kSize - text_height));
+
+  gfx.drawString(label, label_x, label_y);
 }
+
+}  // namespace
 
 void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
   const int total = satellite::count();
@@ -155,20 +238,22 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
           direction_color);
     }
 
-    const uint16_t dot_color =
+    const uint16_t satellite_color =
         colorForElevation(gfx, sat->elevation);
 
-    drawSatelliteIcon(
-    gfx,
-    x,
-    y,
-    dot_color);
+    drawRotatedSatellite(
+        gfx,
+        x,
+        y,
+        dx,
+        dy,
+        satellite_color);
 
-        drawSatelliteLabel(
-    gfx,
-    *sat,
-    x,
-    y);
+    drawSatelliteLabel(
+        gfx,
+        *sat,
+        x,
+        y);
   }
 }
 
