@@ -35,6 +35,23 @@ void positionToScreen(float azimuth,
       static_cast<int>(std::lround(std::cos(angle) * radius));
 }
 
+uint16_t colorForElevation(lgfx::LovyanGFX& gfx,
+                           float elevation) {
+  if (elevation >= 60.0f) {
+    return gfx.color565(0, 255, 0);
+  }
+
+  if (elevation >= 30.0f) {
+    return gfx.color565(255, 220, 0);
+  }
+
+  if (elevation >= 10.0f) {
+    return gfx.color565(255, 120, 0);
+  }
+
+  return gfx.color565(255, 0, 0);
+}
+
 }  // namespace
 
 void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
@@ -44,8 +61,8 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
     return;
   }
 
-  const uint16_t dot_color = gfx.color565(255, 255, 255);
-  const uint16_t direction_color = gfx.color565(0, 220, 255);
+  const uint16_t direction_color =
+      gfx.color565(0, 220, 255);
 
   for (int i = 0; i < total; ++i) {
     const Satellite* sat = satellite::get(i);
@@ -71,18 +88,26 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
         future_x,
         future_y);
 
-    const float dx = static_cast<float>(future_x - x);
-    const float dy = static_cast<float>(future_y - y);
-    const float length = std::sqrt(dx * dx + dy * dy);
+    const float dx =
+        static_cast<float>(future_x - x);
+
+    const float dy =
+        static_cast<float>(future_y - y);
+
+    const float length =
+        std::sqrt(dx * dx + dy * dy);
 
     if (length > 0.01f) {
-      const float scale = kDirectionLineLengthPx / length;
+      const float scale =
+          kDirectionLineLengthPx / length;
 
       const int line_end_x =
-          x + static_cast<int>(std::lround(dx * scale));
+          x + static_cast<int>(
+                  std::lround(dx * scale));
 
       const int line_end_y =
-          y + static_cast<int>(std::lround(dy * scale));
+          y + static_cast<int>(
+                  std::lround(dy * scale));
 
       gfx.drawWideLine(
           x,
@@ -92,6 +117,9 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
           kDirectionLineHalfWidth,
           direction_color);
     }
+
+    const uint16_t dot_color =
+        colorForElevation(gfx, sat->elevation);
 
     gfx.fillSmoothCircle(
         x,
