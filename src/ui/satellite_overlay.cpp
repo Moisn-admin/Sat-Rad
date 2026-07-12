@@ -54,7 +54,21 @@ uint16_t colorForElevation(lgfx::LovyanGFX& gfx,
 }
 
 }  // namespace
+void drawSatelliteIcon(lgfx::LovyanGFX& gfx,
+                       int x,
+                       int y,
+                       uint16_t color)
+{
+    // Mittelpunkt
+    gfx.fillRect(x - 1, y - 1, 3, 3, color);
 
+    // Solarpanels
+    gfx.drawLine(x - 5, y, x - 2, y, color);
+    gfx.drawLine(x + 2, y, x + 5, y, color);
+
+    // Antenne
+    gfx.drawLine(x, y + 2, x, y + 4, color);
+}
 void drawSatelliteLabel(lgfx::LovyanGFX& gfx,
                         const Satellite& sat,
                         int x,
@@ -144,11 +158,11 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
     const uint16_t dot_color =
         colorForElevation(gfx, sat->elevation);
 
-    gfx.fillSmoothCircle(
-        x,
-        y,
-        kSatelliteDotRadiusPx,
-        dot_color);
+    drawSatelliteIcon(
+    gfx,
+    x,
+    y,
+    dot_color);
 
         drawSatelliteLabel(
     gfx,
