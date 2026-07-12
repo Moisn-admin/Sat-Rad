@@ -153,7 +153,7 @@ void loop() {
 
     if (!g_radar_visible) {
       showRadarIfConnected();
-    } else if (millis() - g_last_satellite_update_ms >= 10000UL) {
+    } else if (millis() - g_last_satellite_update_ms >= 2000UL) {
   g_last_satellite_update_ms = millis();
 
   if (satellite::update()) {
