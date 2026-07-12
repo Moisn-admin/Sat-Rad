@@ -58,7 +58,9 @@ bool update()
 
         reader.close();
 
-    return true;
+Serial.printf("Visible satellites stored: %d\n", count());
+
+return true;
 }
 
 } // namespace satellite
