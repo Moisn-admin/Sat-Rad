@@ -8,6 +8,7 @@
 #include "network/tle_download.h"
 #include <LittleFS.h>
 #include "satellite/tle_reader.h"
+#include "services/time_sync.h"
 
 #include "config.h"
 #include "hardware/display.h"
@@ -92,6 +93,8 @@ void setup() {
 
   if (wifiSetupConnect()) {
     showRadarIfConnected();
+
+    services::time_sync::begin();
 
     if (satellite::downloadTleFiles())
     {
