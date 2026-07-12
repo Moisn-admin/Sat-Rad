@@ -7,15 +7,14 @@
 
 namespace satellite {
 
-bool calculatePosition(const TleRecord& record,
-                       float latitude_deg,
-                       float longitude_deg,
-                       float altitude_m,
-                       float& azimuth_deg,
-                       float& elevation_deg) {
-  const time_t current_time = time(nullptr);
-
-  if (current_time < 1700000000) {
+bool calculatePositionAtTime(const TleRecord& record,
+                             float latitude_deg,
+                             float longitude_deg,
+                             float altitude_m,
+                             time_t unix_time,
+                             float& azimuth_deg,
+                             float& elevation_deg) {
+  if (unix_time < 1700000000) {
     Serial.println("SGP4: UTC time is not ready");
     return false;
   }
@@ -37,12 +36,28 @@ bool calculatePosition(const TleRecord& record,
     return false;
   }
 
-  sgp4.findsat(static_cast<unsigned long>(current_time));
+  sgp4.findsat(static_cast<unsigned long>(unix_time));
 
   azimuth_deg = static_cast<float>(sgp4.satAz);
   elevation_deg = static_cast<float>(sgp4.satEl);
 
   return true;
+}
+
+bool calculatePosition(const TleRecord& record,
+                       float latitude_deg,
+                       float longitude_deg,
+                       float altitude_m,
+                       float& azimuth_deg,
+                       float& elevation_deg) {
+  return calculatePositionAtTime(
+      record,
+      latitude_deg,
+      longitude_deg,
+      altitude_m,
+      time(nullptr),
+      azimuth_deg,
+      elevation_deg);
 }
 
 }  // namespace satellite
