@@ -8,6 +8,35 @@
 
 namespace ui {
 
+namespace {
+
+constexpr float kDegToRad = 0.01745329252f;
+constexpr float kDirectionLineLengthPx = 9.0f;
+constexpr float kDirectionLineHalfWidth = 1.0f;
+constexpr int kSatelliteDotRadiusPx = 3;
+
+void positionToScreen(float azimuth,
+                      float elevation,
+                      int& x,
+                      int& y) {
+  const float safe_elevation =
+      std::max(0.0f, std::min(90.0f, elevation));
+
+  const float radius =
+      static_cast<float>(radar::kGridOuterRadius) *
+      (1.0f - safe_elevation / 90.0f);
+
+  const float angle = azimuth * kDegToRad;
+
+  x = radar::kCenterX +
+      static_cast<int>(std::lround(std::sin(angle) * radius));
+
+  y = radar::kCenterY -
+      static_cast<int>(std::lround(std::cos(angle) * radius));
+}
+
+}  // namespace
+
 void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
   const int total = satellite::count();
 
@@ -15,8 +44,8 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
     return;
   }
 
-  const uint16_t color = gfx.color565(255, 255, 255);
-  constexpr float kDegToRad = 0.01745329252f;
+  const uint16_t dot_color = gfx.color565(255, 255, 255);
+  const uint16_t direction_color = gfx.color565(0, 220, 255);
 
   for (int i = 0; i < total; ++i) {
     const Satellite* sat = satellite::get(i);
@@ -25,24 +54,50 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
       continue;
     }
 
-    const float elevation =
-        std::max(0.0f, std::min(90.0f, sat->elevation));
+    int x = 0;
+    int y = 0;
+    int future_x = 0;
+    int future_y = 0;
 
-    const float radius =
-        static_cast<float>(radar::kGridOuterRadius) *
-        (1.0f - elevation / 90.0f);
+    positionToScreen(
+        sat->azimuth,
+        sat->elevation,
+        x,
+        y);
 
-    const float angle = sat->azimuth * kDegToRad;
+    positionToScreen(
+        sat->nextAzimuth,
+        sat->nextElevation,
+        future_x,
+        future_y);
 
-    const int x =
-        radar::kCenterX +
-        static_cast<int>(std::lround(std::sin(angle) * radius));
+    const float dx = static_cast<float>(future_x - x);
+    const float dy = static_cast<float>(future_y - y);
+    const float length = std::sqrt(dx * dx + dy * dy);
 
-    const int y =
-        radar::kCenterY -
-        static_cast<int>(std::lround(std::cos(angle) * radius));
+    if (length > 0.01f) {
+      const float scale = kDirectionLineLengthPx / length;
 
-    gfx.fillSmoothCircle(x, y, 3, color);
+      const int line_end_x =
+          x + static_cast<int>(std::lround(dx * scale));
+
+      const int line_end_y =
+          y + static_cast<int>(std::lround(dy * scale));
+
+      gfx.drawWideLine(
+          x,
+          y,
+          line_end_x,
+          line_end_y,
+          kDirectionLineHalfWidth,
+          direction_color);
+    }
+
+    gfx.fillSmoothCircle(
+        x,
+        y,
+        kSatelliteDotRadiusPx,
+        dot_color);
   }
 }
 

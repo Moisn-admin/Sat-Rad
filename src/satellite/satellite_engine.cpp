@@ -15,7 +15,7 @@ namespace satellite {
 
 namespace {
 
-constexpr time_t kDirectionPreviewSeconds = 2;
+constexpr time_t kDirectionPreviewSeconds = 60;
 
 }  // namespace
 
@@ -26,7 +26,8 @@ bool update() {
   TleRecord record;
 
   if (!reader.open(LittleFS, "/visual.tle")) {
-    Serial.println("Satellite engine: could not open /visual.tle");
+    Serial.println(
+        "Satellite engine: could not open /visual.tle");
     return false;
   }
 
@@ -35,33 +36,26 @@ bool update() {
   while (reader.next(record)) {
     float azimuth = 0.0f;
     float elevation = 0.0f;
+    float next_azimuth = 0.0f;
+    float next_elevation = 0.0f;
 
-    if (!calculatePositionAtTime(
+    if (!calculateMotion(
             record,
             services::location::lat(),
             services::location::lon(),
             0.0f,
             current_time,
+            kDirectionPreviewSeconds,
             azimuth,
-            elevation)) {
+            elevation,
+            next_azimuth,
+            next_elevation)) {
       continue;
     }
 
     if (elevation <= 0.0f) {
       continue;
     }
-
-    float next_azimuth = azimuth;
-    float next_elevation = elevation;
-
-    calculatePositionAtTime(
-        record,
-        services::location::lat(),
-        services::location::lon(),
-        0.0f,
-        current_time + kDirectionPreviewSeconds,
-        next_azimuth,
-        next_elevation);
 
     Satellite sat{};
 
@@ -79,7 +73,9 @@ bool update() {
 
   reader.close();
 
-  Serial.printf("Visible satellites stored: %d\n", count());
+  Serial.printf(
+      "Visible satellites stored: %d\n",
+      count());
 
   return true;
 }
