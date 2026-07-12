@@ -176,7 +176,7 @@ void initTagLabelMetrics() {
 
 void initPalette() {
   radar::kColorBackground = tft.color565(radar::kBgR, radar::kBgG, radar::kBgB);
-  radar::kColorGrid = tft.color565(radar::kGridR, radar::kGridG, radar::kGridB);
+  radar::kColorGrid = tft.color565(0, 0, 255);
   radar::kColorLabel = tft.color565(255, 255, 255);
   radar::kColorCenter = tft.color565(255, 255, 255);
   // GC9A01 BGR panel: swap R/B in color565 so logical red renders red on screen.
@@ -636,6 +636,21 @@ void drawScaleLabel(int cx, int cy, int outer_radius) {
                                scaleLabelAnchorX(cx, outer_radius), cy);
 }
 
+void drawElevationLabels(int cx, int cy, int outer_radius) {
+  applyScaleStyle();
+
+  s_draw->setTextDatum(textdatum_t::middle_left);
+  s_draw->setTextColor(
+      radar::kColorGrid,
+      radar::kColorBackground);
+
+  const int ring60 = outer_radius / 3;
+  const int ring30 = (outer_radius * 2) / 3;
+
+  s_draw->drawString("60°", cx + ring60 + 4, cy - 10);
+  s_draw->drawString("30°", cx + ring30 + 4, cy - 10);
+}
+
 template <typename Gfx>
 void drawStaticGrid(Gfx& gfx) {
   initLabelMetrics();
@@ -651,9 +666,9 @@ void drawStaticGrid(Gfx& gfx) {
   initPalette();
   runway::drawLargeAirportRunways(gfx);
   drawCenterDot(cx, cy);
-  drawCardinalLabels();
-  drawScaleLabel(cx, cy, grid_r);
-  gfx.setTextDatum(textdatum_t::top_left);
+drawCardinalLabels();
+drawElevationLabels(cx, cy, grid_r);
+gfx.setTextDatum(textdatum_t::top_left);
 }
 
 bool ensureFrameSprite() {
