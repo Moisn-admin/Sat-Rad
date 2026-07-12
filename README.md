@@ -1,209 +1,150 @@
-# Plane Radar
+# ESP32 Satellite Radar
 
-<img width="800" height="450" alt="plane-radar" src="https://github.com/user-attachments/assets/716d0992-dab8-47ba-8f1a-2aec7f607419" />
+An open-source satellite radar for the ESP32-C3 Super Mini with a 1.28" GC9A01 round display.
 
-**3D printed case (STL + assembly):** [MakerWorld](https://makerworld.com/en/models/2872376-esp32-plane-radar-live-ads-b-on-a-round-display#profileId-3207083) · **Firmware:** [Releases](https://github.com/MatixYo/ESP32-Plane-Radar/releases)
+Using live TLE data and SGP4 orbit propagation, the device calculates and displays satellites currently visible from your location in real time.
 
-Firmware for an **ESP32-C3 Super Mini** and a **1.28″ round GC9A01** display (240×240). Shows a circular **ADS-B radar** around your configured location, with **WiFiManager** for first-time setup.
+---
 
-## What it does
+## Credits
 
-1. **Wi‑Fi setup** (if needed) — captive portal on AP **`PlaneRadar-Setup`**
-2. **Radar** — live aircraft from [adsb.fi](https://opendata.adsb.fi/) on a sonar-style grid
+This project is based on the excellent **ESP32 Plane Radar** by **MatixYo**.
 
-After Wi‑Fi is saved, the device reconnects automatically; the radar runs in the main loop with periodic ADS-B updates (~5 s).
+Original repository:
+https://github.com/MatixYo/ESP32-Plane-Radar
 
-## Controls (BOOT, GPIO 9, active LOW)
+Original 3D printable enclosure:
+https://makerworld.com/en/models/2872376-esp32-plane-radar-live-ads-b-on-a-round-display
 
-| Action | Effect |
-|--------|--------|
-| **Short tap** | Cycle range preset (5 → 10 → 15 → 25 km); saved to flash |
-| **Hold 3 s** | Clear Wi‑Fi, location, and units; reboot into setup portal |
+Many thanks to MatixYo for making the original project open source and providing such a solid foundation.
 
-During setup you can also hold BOOT at power-on to force a credential reset (same as the long press).
+---
 
-## Wi‑Fi setup portal
+## About
 
-**First-time setup** (no saved Wi‑Fi):
+This project started as a modification of the original ESP32 Plane Radar and has evolved into a dedicated satellite tracking device.
 
-1. Connect to **`PlaneRadar-Setup`**
-2. Open **`http://plane-radar.local`** (preferred) or **`http://192.168.4.1`** — both are shown on the yellow setup screen; captive portal may open automatically
-3. Set home Wi‑Fi, then save
+As I am still fairly new to C++ and embedded programming, a significant part of this project was developed with the assistance of **ChatGPT (OpenAI)**. The software combines my own ideas, testing, hardware integration and project direction with AI-assisted development.
 
-**Reconfigure anytime** (after the device is on your network):
+---
 
-1. Open **`http://plane-radar.local`** or **`http://<device-ip>`** (e.g. from your router or serial log at boot)
-2. Change Wi‑Fi, location, units, or runway overlay; save
+## Features
 
-The same portal runs on the setup AP and on the device’s LAN IP while connected to Wi‑Fi. mDNS hostname is `plane-radar` → **plane-radar.local** (`kPortalHostname` in `config.h`). Some clients resolve `.local` slowly; use the IP if needed.
+- Real-time satellite tracking
+- Live orbit calculation using the SGP4 propagator
+- Automatic download of current TLE data
+- Automatic synchronization via NTP
+- Radar display with North always at the top
+- Satellite labels
+- Satellite direction indicators
+- Automatic satellite selection
+- Manual satellite selection using the BOOT button
+- Satellite information panel
+- Satellite visibility status
+  - Visible
+  - Earth's Shadow
+  - Daylight
+- Elevation-based radar rings
+- Elevation-based satellite colors
+- Automatic position updates every 2 seconds
+- WiFi configuration using WiFiManager
+- Local web configuration portal
+- mDNS support
+- LittleFS storage for downloaded TLE data
 
-**Custom fields** (stored in NVS):
+---
 
-| Field | Purpose |
-|-------|---------|
-| **Latitude / Longitude** | Radar center and ADS-B query position (defaults in `config.h` until set) |
-| **Display distances in miles** | Ring scale label in **mi** instead of **km** (e.g. `6mi` vs `10km`) |
-| **Show airport runways** | Major-airport runway overlay on the radar (off to hide) |
+## Hardware
 
-After a reset, the device reboots and shows the setup screen immediately (no “Connecting” loop on stale credentials).
+- ESP32-C3 Super Mini
+- 1.28" GC9A01 Round Display (240×240)
+- WiFi connection
 
-## Radar display
+---
 
-### Grid
+## Installation
 
-- Dark blue background, subdued green rings and crosshairs
-- White **N / S / E / W** at the bezel; range label on the **east** spoke (ring 3 = ¾ of outer radius)
-- White center dot
+### Web Installer (Recommended)
 
-Layout and colors: `include/ui/radar_theme.h`.
+A web installer will be available for easy installation.
 
-### Range presets
+1. Connect your ESP32 via USB.
+2. Open the web installer.
+3. Click **Connect**.
+4. Select your ESP32 board.
+5. Click **Install**.
+6. Wait until flashing has completed.
 
-| Ring 3 label | Outer radius (aircraft scale) |
-|------------|-------------------------------|
-| 5 km / 3 mi | ~6.7 km |
-| 10 km / 6 mi | ~13.3 km (default) |
-| 15 km / 9 mi | ~20 km |
-| 25 km / 16 mi | ~33.3 km |
+**Web Installer**
 
-Preset and miles/km choice persist across reboot (`planeradar` NVS namespace).
+*(Coming soon)*
 
-### Runways
+---
 
-- Major airports from OurAirports (`large_airport`); all open runway strips in range (helipads excluded)
-- Teal runway lines with one ICAO label per airport (e.g. `KJFK`); toggle in the Wi‑Fi setup portal
-- Update the embedded list: `python3 scripts/build_large_airports.py`
+### Manual Installation
 
-### Aircraft
+Alternatively, download the latest firmware from the **Releases** section and flash the `.bin` file using:
 
-- **Inside the outer ring** — red heading triangle, magenta speed vector (clipped at the ring), callsign / type / altitude tags
-- **Outside the ring** (still within ADS-B fetch) — small **red dot on the screen rim** at the correct bearing (direction cue; not distance-accurate past the ring)
-- **Tags** — placed toward the **center**: west (left) → tag on the **right** of the symbol; east (right) → tag on the **left**
+- ESP Web Tools
+- esptool.py
+- PlatformIO
 
-As range decreases (or aircraft approach), targets move inward; beyond-ring dots become full symbols when they cross the outer ring.
+---
 
-### ADS-B
+## First Startup
 
-- Source: `https://opendata.adsb.fi/api/v3/`
-- Fetch radius: `ui::radar::fetchRadiusKm()` — scales with the active preset to roughly the screen edge (so rim dots have data)
-- Poll interval: `kAdsbFetchIntervalMs` (5 s) in `config.h`
-- Ground aircraft hidden by default (`kAdsbShowGroundAircraft`)
+On first boot the device automatically starts the WiFi configuration portal.
 
-## Configuration
+Configure:
 
-Edit **`include/config.h`** for hardware and behavior:
+- WiFi network
+- Latitude
+- Longitude
 
-| Area | Keys / notes |
-|------|----------------|
-| Portal | `kPortalApName`, `kPortalIp`, `kPortalHostname` / `kPortalHostUrl` (mDNS; needs `-DWM_MDNS` in `platformio.ini`) |
-| Wi‑Fi timing | connect attempts, reconnect grace, portal timeout (`0` = no timeout) |
-| BOOT | `kBootPin`, `kBootResetHoldMs`, `kBootTapMinMs` |
-| Display SPI | pins, `kDisplayInvert`, `kDisplayRgbOrder`, `kDisplaySpiWriteHz` |
-| Default location | `kDefaultRadarLat`, `kDefaultRadarLon` (until portal overrides) |
-| ADS-B | `kAdsbFetchIntervalMs`, `kAdsbShowGroundAircraft` |
+After saving the configuration the device will automatically:
 
-Range presets: `include/ui/radar_range.h` (`kRangePresets`).
+- synchronize the current UTC time
+- download the latest satellite TLE data
+- calculate all currently visible satellites
 
-## Project layout
+---
 
-```
-include/
-  config.h
-  hardware/
-    lgfx_config.hpp
-    display.h
-    display_font.h
-  data/
-    large_airports.h
-  ui/
-    radar_theme.h
-    radar_range.h
-    radar_display.h
-    runway_overlay.h
-    status_screens.h
-  services/
-    wifi_setup.h
-    radar_location.h
-    adsb_client.h
-data/
-  ui_font.vlw              — embedded smooth UI font (Noto Sans Bold)
-scripts/
-  build_large_airports.py
-src/
-  main.cpp
-  data/
-    large_airports_data.cpp
-  hardware/
-  ui/
-  services/
-```
+## Controls
 
-## Wiring (GC9A01 ↔ ESP32-C3 Super Mini)
+**Short press**
 
-| Display | ESP32-C3 |
-|---------|----------|
-| VCC | 3V3 |
-| GND | GND |
-| RST | GPIO **0** |
-| CS | GPIO **1** |
-| DC | GPIO **10** |
-| SDA (MOSI) | GPIO **3** |
-| SCL (SCLK) | GPIO **4** |
-| BOOT (user) | GPIO **9** |
+Select the next visible satellite.
 
-## Build
+**Long press**
 
-```bash
-pio run -t upload
-pio device monitor
-```
+Reset WiFi settings and reopen the setup portal.
 
-- PlatformIO env: **`supermini`**
-- Serial: **115200** baud
-- USB CDC on boot enabled in `platformio.ini` for the Super Mini
+---
 
-### Web-flashable release image
+## Known Limitations
 
-Single `.bin` for [esptool-js](https://espressif.github.io/esptool-js/) and similar tools (ESP32-C3, 4 MB, flash at **0x0**):
+- The current WiFi configuration interface is still inherited from the original Plane Radar project and therefore contains some plane-related labels and wording.
+- This is purely cosmetic and does not affect the functionality of the Satellite Radar.
+- A redesigned setup interface specifically tailored to the Satellite Radar is planned for a future release.
 
-```bash
-chmod +x scripts/merge-firmware.sh   # once
-./scripts/merge-firmware.sh
-```
+---
 
-Writes `release/plane-radar-merged.bin`. Skip rebuild if firmware is already built:
+## Roadmap
 
-```bash
-./scripts/merge-firmware.sh --no-build
-```
+Planned features include:
 
-Or via PlatformIO only (output: `.pio/build/supermini/firmware-merged.bin`):
+- Satellite visual magnitude
+- Additional satellite information
+- Satellite categories
+- Pass prediction
+- Sky pointing mode using a digital compass
+- Improved user interface
+- Dedicated satellite configuration pages
 
-```bash
-pio run -e supermini
-pio run -t merge -e supermini
-```
+---
 
-Put the board in download mode (hold **BOOT**, tap **RESET**), then flash with Chrome/Edge over USB.
+## License
 
-### CI and releases (GitHub Actions)
+This project follows the licensing terms of the original ESP32 Plane Radar project where applicable.
 
-| Workflow | When | Output |
-|----------|------|--------|
-| [Build](.github/workflows/build.yml) | Push / PR to `main` | Artifact `plane-radar-supermini` (merged + split `.bin` files, ~90 days) |
-| [Release](.github/workflows/release.yml) | Git tag `v*` (e.g. `v1.0.0`) | GitHub Release asset `plane-radar-v1.0.0.bin` + `.sha256` |
-
-To ship a version users can download:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-The release workflow builds firmware in CI and attaches the merged image to the release. Download from **Releases** on GitHub, then flash at **0x0** (ESP32-C3, 4 MB).
-
-## Dependencies
-
-- [LovyanGFX](https://github.com/lovyan03/LovyanGFX)
-- [WiFiManager](https://github.com/tzapu/WiFiManager)
-- [ArduinoJson](https://github.com/bblanchon/ArduinoJson)
+Please also refer to the original repository for licensing information.
