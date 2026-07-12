@@ -18,4 +18,5 @@ void updateAutomaticSelection(unsigned long now_ms);
 const Satellite* selected();
 int selectedIndex();
 
+void selectNextManual(unsigned long now_ms);
 }  // namespace satellite

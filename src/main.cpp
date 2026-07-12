@@ -18,6 +18,7 @@
 #include "ui/radar_display.h"
 #include "ui/radar_range.h"
 #include "ui/status_screens.h"
+#include "ui/satellite_overlay.h"
 
 namespace {
 
@@ -25,6 +26,7 @@ bool g_radar_visible = false;
 unsigned long g_wifi_down_since = 0;
 unsigned long g_last_reconnect_ms = 0;
 unsigned long g_last_satellite_update_ms = 0;
+
 
 void showRadarIfConnected() {
   if (WiFi.status() != WL_CONNECTED) {
@@ -54,10 +56,24 @@ void onRangeTap() {
 void handleBootButton() {
   bootButtonPollLongPress();
 
+  if (bootButtonConsumeInfoToggle()) {
+    ui::toggleSatelliteInfoBox();
+    ui::radarDisplayDraw();
+
+    Serial.printf(
+        "Info box: %s\n",
+        ui::satelliteInfoBoxVisible() ? "on" : "off");
+
+    return;
+  }
+
   if (bootButtonConsumeTap()) {
-    onRangeTap();
+    satellite::selectNextManual(millis());
+    ui::radarDisplayDraw();
   }
 }
+
+  
 
 void fetchAndDrawAircraft() {
   const float fetch_km = ui::radar::fetchRadiusKm();

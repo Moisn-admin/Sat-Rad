@@ -18,6 +18,7 @@ constexpr float kDegToRad = 0.01745329252f;
 constexpr float kDirectionLineLengthPx = 9.0f;
 constexpr float kDirectionLineHalfWidth = 1.0f;
 constexpr int kLabelGapPx = 7;
+bool s_info_box_visible = true;
 
 void positionToScreen(float azimuth,
                       float elevation,
@@ -359,7 +360,15 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
         x,
         y);
   }
-  drawSelectedSatelliteInfo(gfx);
+  if (s_info_box_visible) {
+    drawSelectedSatelliteInfo(gfx);
+}
+}
+void toggleSatelliteInfoBox() {
+  s_info_box_visible = !s_info_box_visible;
 }
 
+bool satelliteInfoBoxVisible() {
+  return s_info_box_visible;
+}
 }  // namespace ui

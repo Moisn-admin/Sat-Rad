@@ -154,7 +154,32 @@ void updateAutomaticSelection(unsigned long now_ms) {
   // Kein Satellit über 30°: höchsten sichtbaren behalten.
   selectIndex(findHighestSatellite());
 }
+void selectNextManual(unsigned long now_ms) {
+  if (g_count <= 0) {
+    selectIndex(-1);
+    return;
+  }
 
+  int current_index = findSelectedByName();
+
+  if (current_index < 0) {
+    current_index = findHighestSatellite();
+  }
+
+  for (int step = 1; step <= g_count; ++step) {
+    const int next_index =
+        (current_index + step) % g_count;
+
+    if (g_satellites[next_index].visible) {
+      selectIndex(next_index);
+
+      // Automatik erst wieder nach 6 Sekunden.
+      g_last_selection_ms = now_ms;
+
+      return;
+    }
+  }
+}
 const Satellite* selected() {
   if (g_selected_index < 0 ||
       g_selected_index >= g_count) {

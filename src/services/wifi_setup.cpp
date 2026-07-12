@@ -24,21 +24,35 @@ volatile bool s_boot_is_down = false;
 volatile unsigned long s_boot_down_ms = 0;
 bool s_long_press_handled = false;
 bool s_boot_interrupt_attached = false;
+volatile bool s_boot_info_toggle_pending = false;
+constexpr unsigned long kBootInfoHoldMs = 1800UL;
 
 void IRAM_ATTR onBootButtonIsr() {
-  const bool down = digitalRead(config::kBootPin) == LOW;
+  const bool down =
+      digitalRead(config::kBootPin) == LOW;
+
   const unsigned long now = millis();
+
   portENTER_CRITICAL_ISR(&s_boot_mux);
+
   if (down) {
     s_boot_is_down = true;
     s_boot_down_ms = now;
   } else if (s_boot_is_down) {
-    const unsigned long held = now - s_boot_down_ms;
-    if (held >= config::kBootTapMinMs && held < config::kBootResetHoldMs) {
+    const unsigned long held =
+        now - s_boot_down_ms;
+
+    if (held >= kBootInfoHoldMs &&
+        held < config::kBootResetHoldMs) {
+      s_boot_info_toggle_pending = true;
+    } else if (held >= config::kBootTapMinMs &&
+               held < kBootInfoHoldMs) {
       s_boot_tap_pending = true;
     }
+
     s_boot_is_down = false;
   }
+
   portEXIT_CRITICAL_ISR(&s_boot_mux);
 }
 
@@ -377,7 +391,19 @@ bool bootButtonConsumeTap() {
   portEXIT_CRITICAL(&s_boot_mux);
   return tap;
 }
+bool bootButtonConsumeInfoToggle() {
+  portENTER_CRITICAL(&s_boot_mux);
 
+  const bool pending = s_boot_info_toggle_pending;
+
+  if (pending) {
+    s_boot_info_toggle_pending = false;
+  }
+
+  portEXIT_CRITICAL(&s_boot_mux);
+
+  return pending;
+}
 void bootButtonPollLongPress() {
   if (wifiBootButtonPressed()) {
     portENTER_CRITICAL(&s_boot_mux);
