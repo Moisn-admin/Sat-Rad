@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include "storage/filesystem.h"
+#include "network/tle_download.h"
 
 #include "config.h"
 #include "hardware/display.h"
@@ -90,6 +91,9 @@ void setup() {
   if (wifiSetupConnect()) {
     showRadarIfConnected();
   }
+
+  Serial.println("Satellite module ready");
+  
 }
 
 void loop() {
