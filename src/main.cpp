@@ -105,18 +105,25 @@ void setup() {
 
     services::time_sync::begin();
 
-    if (satellite::downloadTleFiles()) {
-      Serial.println("TLE download successful");
+ if (satellite::update()) {
+  Serial.printf("Visible satellites: %d\n",
+                satellite::count());
 
-      if (satellite::update()) {
-        Serial.printf("Visible satellites: %d\n",
-                      satellite::count());
-      } else {
-        Serial.println("Satellite update failed");
-      }
-    } else {
-      Serial.println("TLE download failed");
-    }
+  satellite::updateAutomaticSelection(millis());
+
+  const Satellite* selected_satellite =
+      satellite::selected();
+
+  if (selected_satellite != nullptr) {
+    Serial.printf(
+        "Selected: %s  Az %.1f  El %.1f\n",
+        selected_satellite->name,
+        selected_satellite->azimuth,
+        selected_satellite->elevation);
+  }
+} else {
+  Serial.println("Satellite update failed");
+}
   }
 
   Serial.println("Satellite module ready");
@@ -156,9 +163,22 @@ void loop() {
     } else if (millis() - g_last_satellite_update_ms >= 2000UL) {
   g_last_satellite_update_ms = millis();
 
-  if (satellite::update()) {
+ if (satellite::update()) {
   Serial.printf("Visible satellites: %d\n",
                 satellite::count());
+
+  satellite::updateAutomaticSelection(millis());
+
+  const Satellite* selected_satellite =
+      satellite::selected();
+
+  if (selected_satellite != nullptr) {
+    Serial.printf(
+        "Selected: %s  Az %.1f  El %.1f\n",
+        selected_satellite->name,
+        selected_satellite->azimuth,
+        selected_satellite->elevation);
+  }
 
   ui::radarDisplayDraw();
 } else {

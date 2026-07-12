@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <lgfx/v1/lgfx_fonts.hpp>
+#include <cstdio>
+#include <cstring>
 
 #include "satellite/satellite_label.h"
 #include "satellite/satellite_manager.h"
@@ -150,21 +152,30 @@ void drawSatelliteLabel(lgfx::LovyanGFX& gfx,
   gfx.setFont(&fonts::Font0);
   gfx.setTextSize(1);
   gfx.setTextDatum(textdatum_t::top_left);
-  gfx.setTextColor(
-      TFT_WHITE,
-      radar::kColorBackground);
+
+  // Nur Vordergrundfarbe: Hintergrund bleibt transparent.
+  gfx.setTextColor(TFT_WHITE);
 
   const int text_width = gfx.textWidth(label);
   const int text_height = gfx.fontHeight();
 
-  int label_x = x + kLabelGapPx;
+  constexpr int kGap = 4;
+
+  int label_x;
   int label_y = y - text_height / 2;
 
-  if (label_x + text_width >= radar::kSize) {
-    label_x = x - kLabelGapPx - text_width;
+  // Links im Radar: Text rechts vom Satelliten.
+  // Rechts im Radar: Text links vom Satelliten.
+  if (x < radar::kCenterX) {
+    label_x = x + kGap;
+  } else {
+    label_x = x - kGap - text_width;
   }
 
-  label_x = std::max(0, label_x);
+  label_x = std::max(
+      0,
+      std::min(label_x, radar::kSize - text_width));
+
   label_y = std::max(
       0,
       std::min(label_y, radar::kSize - text_height));
@@ -173,6 +184,90 @@ void drawSatelliteLabel(lgfx::LovyanGFX& gfx,
 }
 
 }  // namespace
+void drawSelectedSatelliteInfo(lgfx::LovyanGFX& gfx) {
+  const Satellite* sat = satellite::selected();
+
+  if (sat == nullptr) {
+    return;
+  }
+
+  char name[32]{};
+  std::strncpy(name, sat->name, sizeof(name) - 1);
+
+  // Leerzeichen am Ende des TLE-Namens entfernen.
+  for (int i = static_cast<int>(std::strlen(name)) - 1;
+       i >= 0 && name[i] == ' ';
+       --i) {
+    name[i] = '\0';
+  }
+
+  const char* visibility_text = "Unbekannt";
+
+  switch (sat->visibility) {
+    case SatelliteVisibility::Lighted:
+      visibility_text = "Beleuchtet";
+      break;
+
+    case SatelliteVisibility::Eclipsed:
+      visibility_text = "Erdschatten";
+      break;
+
+    case SatelliteVisibility::Daylight:
+      visibility_text = "Tageshimmel";
+      break;
+
+    default:
+      break;
+  }
+
+  char position_text[32]{};
+
+  std::snprintf(
+      position_text,
+      sizeof(position_text),
+      "Az %.0f  El %.0f",
+      sat->azimuth,
+      sat->elevation);
+
+  constexpr int box_x = 52;
+constexpr int box_y = 199;
+constexpr int box_w = 136;
+constexpr int box_h = 24;
+
+ // Schwarzer Balken
+gfx.fillRect(
+    0,
+    195,
+    radar::kSize,
+    52,
+    TFT_BLACK);
+
+// Dünne rote Linie oben
+gfx.drawFastHLine(
+    0,
+    195,
+    radar::kSize,
+    gfx.color565(0, 0, 255));
+
+  gfx.setFont(&fonts::Font0);
+  gfx.setTextSize(1);
+  gfx.setTextColor(TFT_WHITE);
+  gfx.setTextDatum(textdatum_t::top_center);
+
+char detail_text[40]{};
+
+std::snprintf(
+    detail_text,
+    sizeof(detail_text),
+    "Az %.0f  El %.0f  %s",
+    sat->azimuth,
+    sat->elevation,
+    visibility_text);
+
+gfx.drawString(name, radar::kCenterX, box_y + 3);
+gfx.drawString(position_text, radar::kCenterX, box_y + 14);
+gfx.drawString(visibility_text, radar::kCenterX, box_y + 25);
+}
 
 void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
   const int total = satellite::count();
@@ -249,12 +344,22 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
         dy,
         satellite_color);
 
+    if (i == satellite::selectedIndex()) {
+    const uint16_t selection_color =
+        gfx.color565(255, 255, 255);
+
+    gfx.drawCircle(x, y, 9, selection_color);
+    gfx.drawCircle(x, y, 10, selection_color);
+}
+    
+
     drawSatelliteLabel(
         gfx,
         *sat,
         x,
         y);
   }
+  drawSelectedSatelliteInfo(gfx);
 }
 
 }  // namespace ui
