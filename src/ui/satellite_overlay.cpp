@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include "satellite/satellite_label.h"
 
 #include "satellite/satellite_manager.h"
 #include "ui/radar_theme.h"
@@ -53,6 +54,28 @@ uint16_t colorForElevation(lgfx::LovyanGFX& gfx,
 }
 
 }  // namespace
+
+void drawSatelliteLabel(lgfx::LovyanGFX& gfx,
+                        const Satellite& sat,
+                        int x,
+                        int y)
+{
+    char label[12]{};
+
+    satellite::makeShortLabel(
+        sat.name,
+        label,
+        sizeof(label));
+
+    if (label[0] == '\0')
+        return;
+
+    gfx.setTextSize(1);
+    gfx.setTextColor(TFT_WHITE);
+    gfx.setFont(&fonts::Font0);
+
+    gfx.drawString(label, x + 6, y - 4);
+}
 
 void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
   const int total = satellite::count();
@@ -126,6 +149,12 @@ void drawSatelliteOverlay(lgfx::LovyanGFX& gfx) {
         y,
         kSatelliteDotRadiusPx,
         dot_color);
+
+        drawSatelliteLabel(
+    gfx,
+    *sat,
+    x,
+    y);
   }
 }
 
