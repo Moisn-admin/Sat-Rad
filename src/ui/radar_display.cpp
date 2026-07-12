@@ -14,6 +14,7 @@
 #include "ui/radar_range.h"
 #include "ui/radar_theme.h"
 #include "ui/runway_overlay.h"
+#include "ui/satellite_overlay.h"
 
 
 namespace ui {
@@ -674,9 +675,10 @@ bool ensureFrameSprite() {
 void renderFrame() {
   drawStaticGrid(s_frame);  // opens its own DrawScope(s_frame)
   {
-    const DrawScope scope(s_frame);
-    drawAircraft();
-  }
+  const DrawScope scope(s_frame);
+  drawAircraft();
+  drawSatelliteOverlay(s_frame);
+}
   s_frame.pushSprite(0, 0);
   tft.setTextDatum(textdatum_t::top_left);
 }
@@ -693,10 +695,10 @@ void radarDisplayDraw() {
   }
 
   // Fallback when the sprite can't be allocated: draw straight to the panel.
-  const DrawScope scope(tft);
-  drawStaticGrid(tft);
-  drawAircraft();
-  tft.setTextDatum(textdatum_t::top_left);
+ drawStaticGrid(tft);
+drawAircraft();
+drawSatelliteOverlay(tft);
+tft.setTextDatum(textdatum_t::top_left);
 }
 
 void radarDisplayRefreshAircraft() {

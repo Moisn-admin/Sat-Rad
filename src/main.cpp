@@ -157,9 +157,11 @@ void loop() {
   g_last_satellite_update_ms = millis();
 
   if (satellite::update()) {
-    Serial.printf("Visible satellites: %d\n",
-                  satellite::count());
-  } else {
+  Serial.printf("Visible satellites: %d\n",
+                satellite::count());
+
+  ui::radarDisplayDraw();
+} else {
     Serial.println("Satellite update failed");
   }
 }
