@@ -6,6 +6,8 @@
 #include <WiFi.h>
 #include "storage/filesystem.h"
 #include "network/tle_download.h"
+#include <LittleFS.h>
+#include "satellite/tle_reader.h"
 
 #include "config.h"
 #include "hardware/display.h"
@@ -94,6 +96,27 @@ void setup() {
     if (satellite::downloadTleFiles())
     {
         Serial.println("TLE download successful");
+        satellite::TleReader reader;
+satellite::TleRecord record;
+
+if (reader.open(LittleFS, "/visual.tle"))
+{
+    int count = 0;
+
+    while (reader.next(record))
+    {
+        Serial.printf("%3d: %s\n", count + 1, record.name);
+        count++;
+    }
+
+    reader.close();
+
+    Serial.printf("Visual satellites: %d\n", count);
+}
+else
+{
+    Serial.println("Could not open /visual.tle");
+}
     }
     else
     {
