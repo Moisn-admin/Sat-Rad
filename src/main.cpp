@@ -4,19 +4,17 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include "storage/filesystem.h"
-#include "network/tle_download.h"
-#include <LittleFS.h>
-#include "satellite/tle_reader.h"
-#include "services/time_sync.h"
-#include <cstring>
-#include "satellite/satellite_position.h"
 
 #include "config.h"
 #include "hardware/display.h"
+#include "network/tle_download.h"
+#include "satellite/satellite_engine.h"
+#include "satellite/satellite_manager.h"
 #include "services/adsb_client.h"
 #include "services/radar_location.h"
+#include "services/time_sync.h"
 #include "services/wifi_setup.h"
+#include "storage/filesystem.h"
 #include "ui/radar_display.h"
 #include "ui/radar_range.h"
 #include "ui/status_screens.h"
@@ -33,15 +31,19 @@ void showRadarIfConnected() {
     g_radar_visible = false;
     return;
   }
+
   ui::radarDisplayDraw();
   g_radar_visible = true;
 }
 
 void onRangeTap() {
   ui::radar::rangeNext();
+
   char range_label[12];
   ui::radar::formatCurrentRing3Label(range_label, sizeof(range_label));
-  Serial.printf("Range: %s (outer ~%.0f km)\n", range_label,
+
+  Serial.printf("Range: %s (outer ~%.0f km)\n",
+                range_label,
                 ui::radar::rangeCurrent().outer_km);
 
   if (g_radar_visible && WiFi.status() == WL_CONNECTED) {
@@ -51,6 +53,7 @@ void onRangeTap() {
 
 void handleBootButton() {
   bootButtonPollLongPress();
+
   if (bootButtonConsumeTap()) {
     onRangeTap();
   }
@@ -58,11 +61,15 @@ void handleBootButton() {
 
 void fetchAndDrawAircraft() {
   const float fetch_km = ui::radar::fetchRadiusKm();
-  if (!services::adsb::fetchUpdate(services::location::lat(),
-                                   services::location::lon(), fetch_km)) {
+
+  if (!services::adsb::fetchUpdate(
+          services::location::lat(),
+          services::location::lon(),
+          fetch_km)) {
     handleBootButton();
     return;
   }
+
   ui::radarDisplayRefreshAircraft();
   handleBootButton();
 }
@@ -72,23 +79,23 @@ void fetchAndDrawAircraft() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+
   Serial.println();
   Serial.println("Plane Radar");
 
   bootButtonInit();
   displayInit();
 
-  if (!storage::begin())
-{
-    while (true)
-    {
-        delay(1000);
+  if (!storage::begin()) {
+    while (true) {
+      delay(1000);
     }
-}
+  }
 
   if (wifiShowsSetupScreenOnBoot()) {
     statusScreenPortal();
   }
+
   services::location::init();
   ui::radar::rangeInit();
   services::adsb::setPollFn(wifiLoop);
@@ -98,60 +105,21 @@ void setup() {
 
     services::time_sync::begin();
 
-    if (satellite::downloadTleFiles())
-    {
-        Serial.println("TLE download successful");
-        satellite::TleReader reader;
-satellite::TleRecord record;
+    if (satellite::downloadTleFiles()) {
+      Serial.println("TLE download successful");
 
-if (reader.open(LittleFS, "/visual.tle"))
-{
-    int count = 0;
-
-    
-while (reader.next(record))
-{
-    if (strncmp(record.name, "ISS (ZARYA)", 11) == 0)
-    {
-        float azimuth = 0.0f;
-        float elevation = 0.0f;
-
-        if (satellite::calculatePosition(
-                record,
-                services::location::lat(),
-                services::location::lon(),
-                0.0f,
-                azimuth,
-                elevation))
-        {
-            Serial.println();
-            Serial.println("===== ISS =====");
-            Serial.printf("Azimuth: %.2f deg\n", azimuth);
-            Serial.printf("Elevation: %.2f deg\n", elevation);
-            Serial.println("================");
-        }
+      if (satellite::update()) {
+        Serial.printf("Visible satellites: %d\n",
+                      satellite::count());
+      } else {
+        Serial.println("Satellite update failed");
+      }
+    } else {
+      Serial.println("TLE download failed");
     }
+  }
 
-    Serial.printf("%3d: %s\n", count + 1, record.name);
-    count++;
-}
-
-reader.close();
-
-Serial.printf("Visual satellites: %d\n", count);
-}
-else
-{
-    Serial.println("Could not open /visual.tle");
-}
-}
-else
-{
-    Serial.println("TLE download failed");
-}
-}
-
-Serial.println("Satellite module ready");
+  Serial.println("Satellite module ready");
 }
 
 void loop() {
@@ -169,9 +137,12 @@ void loop() {
     }
 
     const unsigned long down_ms = millis() - g_wifi_down_since;
+
     if (down_ms >= config::kWifiDownGraceMs &&
-        millis() - g_last_reconnect_ms >= config::kWifiReconnectIntervalMs) {
+        millis() - g_last_reconnect_ms >=
+            config::kWifiReconnectIntervalMs) {
       g_last_reconnect_ms = millis();
+
       if (wifiReconnect()) {
         g_wifi_down_since = 0;
         showRadarIfConnected();
@@ -179,9 +150,11 @@ void loop() {
     }
   } else {
     g_wifi_down_since = 0;
+
     if (!g_radar_visible) {
       showRadarIfConnected();
-    } else if (millis() - g_last_adsb_fetch_ms >= config::kAdsbFetchIntervalMs) {
+    } else if (millis() - g_last_adsb_fetch_ms >=
+               config::kAdsbFetchIntervalMs) {
       g_last_adsb_fetch_ms = millis();
       fetchAndDrawAircraft();
     }
