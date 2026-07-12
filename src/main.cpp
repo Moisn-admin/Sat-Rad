@@ -9,6 +9,8 @@
 #include <LittleFS.h>
 #include "satellite/tle_reader.h"
 #include "services/time_sync.h"
+#include <cstring>
+#include "satellite/satellite_position.h"
 
 #include "config.h"
 #include "hardware/display.h"
@@ -106,29 +108,50 @@ if (reader.open(LittleFS, "/visual.tle"))
 {
     int count = 0;
 
-    while (reader.next(record))
+    
+while (reader.next(record))
+{
+    if (strncmp(record.name, "ISS (ZARYA)", 11) == 0)
     {
-        Serial.printf("%3d: %s\n", count + 1, record.name);
-        count++;
+        float azimuth = 0.0f;
+        float elevation = 0.0f;
+
+        if (satellite::calculatePosition(
+                record,
+                services::location::lat(),
+                services::location::lon(),
+                0.0f,
+                azimuth,
+                elevation))
+        {
+            Serial.println();
+            Serial.println("===== ISS =====");
+            Serial.printf("Azimuth: %.2f deg\n", azimuth);
+            Serial.printf("Elevation: %.2f deg\n", elevation);
+            Serial.println("================");
+        }
     }
 
-    reader.close();
+    Serial.printf("%3d: %s\n", count + 1, record.name);
+    count++;
+}
 
-    Serial.printf("Visual satellites: %d\n", count);
+reader.close();
+
+Serial.printf("Visual satellites: %d\n", count);
 }
 else
 {
     Serial.println("Could not open /visual.tle");
 }
-    }
-    else
-    {
-        Serial.println("TLE download failed");
-    }
+}
+else
+{
+    Serial.println("TLE download failed");
+}
 }
 
 Serial.println("Satellite module ready");
-
 }
 
 void loop() {
