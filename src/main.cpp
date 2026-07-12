@@ -90,10 +90,19 @@ void setup() {
 
   if (wifiSetupConnect()) {
     showRadarIfConnected();
-  }
 
-  Serial.println("Satellite module ready");
-  
+    if (satellite::downloadTleFiles())
+    {
+        Serial.println("TLE download successful");
+    }
+    else
+    {
+        Serial.println("TLE download failed");
+    }
+}
+
+Serial.println("Satellite module ready");
+
 }
 
 void loop() {
