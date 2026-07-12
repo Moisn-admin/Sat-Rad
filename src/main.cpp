@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include "storage/filesystem.h"
 
 #include "config.h"
 #include "hardware/display.h"
@@ -70,6 +71,15 @@ void setup() {
 
   bootButtonInit();
   displayInit();
+
+  if (!storage::begin())
+{
+    while (true)
+    {
+        delay(1000);
+    }
+}
+
   if (wifiShowsSetupScreenOnBoot()) {
     statusScreenPortal();
   }
