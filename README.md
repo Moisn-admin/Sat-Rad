@@ -77,17 +77,9 @@ A web installer will be available for easy installation.
 
 **Web Installer**
 
-*(Coming soon)*
+(https://web.esphome.io)
 
----
 
-### Manual Installation
-
-Alternatively, download the latest firmware from the **Releases** section and flash the `.bin` file using:
-
-- ESP Web Tools
-- esptool.py
-- PlatformIO
 
 ---
 
