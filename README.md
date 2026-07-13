@@ -58,8 +58,8 @@ As I am still fairly new to C++ and embedded programming, a significant part of 
 
 - ESP32-C3 Super Mini
 - 1.28" GC9A01 Round Display (240×240)
-- WiFi connection
-
+- wires
+- i recommend looking at the original        plane radar from MatixYo as he has well.   designed build instructions.
 ---
 
 ## Installation
