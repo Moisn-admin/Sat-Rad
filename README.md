@@ -128,8 +128,7 @@ Planned features include:
 - Satellite visual magnitude
 - Additional satellite information
 - Satellite categories
-- Pass prediction
-- Sky pointing mode using a digital compass
+- Pass prediction (maybe)
 - Improved user interface
 - Dedicated satellite configuration pages
 
